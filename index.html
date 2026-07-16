@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة المهام | Task Manager</title>
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%235c67f2'/><path d='M30 50 l15 15 l30 -30' stroke='white' stroke-width='12' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* تعريف المتغيرات لتسهيل الدارك مود */
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --primary-color: #5c67f2;
+            --primary-hover: #4a55d9;
+            --danger-color: #e74c3c;
+            --success-color: #2ecc71;
+            --border-color: #e0e0e0;
+            --shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        /* متغيرات الوضع الداكن */
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --border-color: #333333;
+            --shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .app-container {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 500px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* الهيدر */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-icon, .btn-text {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-icon:hover, .btn-text:hover {
+            background-color: var(--border-color);
+        }
+
+        /* منطقة الإدخال */
+        .input-section {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* التوافق مع اتجاهات اللغة */
+        html[dir="rtl"] .input-section { flex-direction: row; }
+        html[dir="ltr"] .input-section { flex-direction: row; }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+        }
+
+        #add-task-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #add-task-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* الفلاتر */
+        .filters {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-btn {
+            flex: 1;
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .filter-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* قائمة المهام */
+        ul {
+            list-style: none;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        /* تخصيص السكرول بار */
+        ul::-webkit-scrollbar {
+            width: 6px;
+        }
+        ul::-webkit-scrollbar-thumb {
+            background-color: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .task-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .task-text {
+            font-size: 1rem;
+            word-break: break-all;
+        }
+
+        .completed .task-text {
+            text-decoration: line-through;
+            color: #888;
+        }
+
+        .task-checkbox {
+            color: var(--border-color);
+            font-size: 1.2rem;
+        }
+
+        .completed .task-checkbox {
+            color: var(--success-color);
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--danger-color);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 5px;
+            opacity: 0.7;
+        }
+
+        .delete-btn:hover {
+            opacity: 1;
+        }
+
+        /* الفوتر */
+        footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #888;
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+        }
+
+        /* التجاوب للهواتف الشاشات الصغيرة جداً */
+        @media (max-width: 400px) {
+            .app-container {
+                padding: 16px;
+            }
+            #add-task-btn span {
+                display: none; /* إخفاء كلمة إضافة والاكتفاء بالأيقونة في الشاشات الصغيرة */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1 id="app-title">قائمة المهام</h1>
+            <div class="controls">
+                <button id="theme-toggle" class="btn-icon" title="تغيير المظهر">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button id="lang-toggle" class="btn-text">EN</button>
+            </div>
+        </header>
+
+        <section class="input-section">
+            <input type="text" id="task-input" placeholder="أضف مهمة جديدة..." autocomplete="off">
+            <button id="add-task-btn">
+                <i class="fas fa-plus"></i>
+                <span id="add-btn-text">إضافة</span>
+            </button>
+        </section>
+
+        <section class="filters">
+            <button class="filter-btn active" data-filter="all" id="filter-all">الكل</button>
+            <button class="filter-btn" data-filter="pending" id="filter-pending">قيد التنفيذ</button>
+            <button class="filter-btn" data-filter="completed" id="filter-completed">المكتملة</button>
+        </section>
+
+        <main>
+            <ul id="task-list">
+                </ul>
+        </main>
+
+        <footer>
+            <p><span id="pending-count">0</span> <span id="footer-text">مهام متبقية</span></p>
+        </footer>
+    </div>
+
+    <script>
+        // مصفوفة تخزين المهام وقاموس اللغات
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        let currentLang = localStorage.getItem('lang') || 'ar';
+        let currentTheme = localStorage.getItem('theme') || 'light';
+
+        const translations = {
+            ar: {
+                title: "قائمة المهام",
+                placeholder: "أضف مهمة جديدة...",
+                add: "إضافة",
+                all: "الكل",
+                pending: "قيد التنفيذ",
+                completed: "المكتملة",
+                remaining: "مهام متبقية"
+            },
+            en: {
+                title: "Task Manager",
+                placeholder: "Add a new task...",
+                add: "Add",
+                all: "All",
+                pending: "Pending",
+                completed: "Completed",
+                remaining: "tasks left"
+            }
+        };
+
+        // عناصر واجهة المستخدم
+        const taskInput = document.getElementById('task-input');
+        const addTaskBtn = document.getElementById('add-task-btn');
+        const taskList = document.getElementById('task-list');
+        const themeToggle = document.getElementById('theme-toggle');
+        const langToggle = document.getElementById('lang-toggle');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        let currentFilter = 'all';
+
+        // التجهيز المبدئي عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', () => {
+            setTheme(currentTheme);
+            setLanguage(currentLang);
+            renderTasks();
+        });
+
+        // ميزة تغيير المظهر (Dark / Light)
+        themeToggle.addEventListener('click', () => {
+            const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            setTheme(theme);
+        });
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            const icon = themeToggle.querySelector('i');
+            if (theme === 'dark') {
+                icon.className = 'fas fa-sun';
+            } else {
+                icon.className = 'fas fa-moon';
+            }
+        }
+
+        // ميزة تغيير اللغة (AR / EN)
+        langToggle.addEventListener('click', () => {
+            const lang = currentLang === 'ar' ? 'en' : 'ar';
+            setLanguage(lang);
+        });
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('lang', lang);
+            
+            // تغيير الاتجاه واللغة في ترويسة HTML
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            
+            // تحديث النصوص
+            document.getElementById('app-title').textContent = translations[lang].title;
+            taskInput.placeholder = translations[lang].placeholder;
+            document.getElementById('add-btn-text').textContent = translations[lang].add;
+            document.getElementById('filter-all').textContent = translations[lang].all;
+            document.getElementById('filter-pending').textContent = translations[lang].pending;
+            document.getElementById('filter-completed').textContent = translations[lang].completed;
+            document.getElementById('footer-text').textContent = translations[lang].remaining;
+            
+            langToggle.textContent = lang === 'ar' ? 'EN' : 'العربية';
+            updatePendingCount();
+        }
+
+        // إضافة مهمة جديدة
+        addTaskBtn.addEventListener('click', addTask);
+        taskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTask();
+        });
+
+        function addTask() {
+            const text = taskInput.value.trim();
+            if (!text) return;
+
+            const newTask = {
+                id: Date.now(),
+                text: text,
+                completed: false
+            };
+
+            tasks.push(newTask);
+            saveAndRender();
+            taskInput.value = '';
+        }
+
+        // حذف مهمة
+        function deleteTask(id) {
+            tasks = tasks.filter(task => task.id !== id);
+            saveAndRender();
+        }
+
+        // تغيير حالة المهمة (مكتملة / غير مكتملة)
+        function toggleTask(id) {
+            tasks = tasks.map(task => {
+                if (task.id === id) {
+                    return { ...task, completed: !task.completed };
+                }
+                return task;
+            });
+            saveAndRender();
+        }
+
+        // فلترة المهام
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentFilter = e.target.getAttribute('data-filter');
+                renderTasks();
+            });
+        });
+
+        // حفظ البيانات في LocalStorage وعرضها
+        function saveAndRender() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function renderTasks() {
+            taskList.innerHTML = '';
+            
+            const filteredTasks = tasks.filter(task => {
+                if (currentFilter === 'pending') return !task.completed;
+                if (currentFilter === 'completed') return task.completed;
+                return true;
+            });
+
+            filteredTasks.forEach(task => {
+                const li = document.createElement('li');
+                li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                
+                li.innerHTML = `
+                    <div class="task-content" onclick="toggleTask(${task.id})">
+                        <i class="${task.completed ? 'fas fa-check-circle' : 'far fa-circle'} task-checkbox"></i>
+                        <span class="task-text">${task.text}</span>
+                    </div>
+                    <button class="delete-btn" onclick="deleteTask(${task.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                taskList.appendChild(li);
+            });
+
+            updatePendingCount();
+        }
+
+        function updatePendingCount() {
+            const pending = tasks.filter(task => !task.completed).length;
+            document.getElementById('pending-count').textContent = pending;
+        }
+    </script>
+</body>
+</html>
